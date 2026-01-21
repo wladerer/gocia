@@ -584,10 +584,16 @@ class Interface:
             self.set_fragList(my_fragList)
         return my_fragList
     
-    def swap_by_group(self, grp1, grp2, max_dist=None):
+    def swap_by_group(self, grp1, grp2, max_dist=None, hasFrag=None):
         '''
         grp1 and grp2 are lists of indices. max_dist is the maximum distance between the two atoms to be swapped.
+        hasFrag: if True, preserve fragment list after swap (default: None, preserves if fragments exist, False to skip preservation)
         '''
+        # Preserve fragment list if requested or if fragments exist
+        fragList_to_restore = None
+        if hasFrag or (hasFrag is None and self.fragList is not None):
+            fragList_to_restore = self.get_fragList()
+        
         tmpAtoms = self.get_allAtoms()
         pos = tmpAtoms.get_positions()
 
@@ -611,6 +617,10 @@ class Interface:
         pos[idx1], pos[idx2] = pos[idx2].copy(), pos[idx1].copy()
         tmpAtoms.set_positions(pos)
         self.set_allPos(pos)
+        
+        # Restore fragment list if it was preserved (fragNames and bridList will be recomputed from fragList)
+        if fragList_to_restore is not None:
+            self.set_fragList(fragList_to_restore)
 
     def rattle(self, stdev = 0.1, zEnhance=False):
         '''
@@ -624,10 +634,16 @@ class Interface:
             rattleVec = (rattleVec.T * (pos[:,2]-zBuf.min())/(pos[:,2].max()-zBuf.min())).T
         self.set_allPos(pos + rattleVec)
 
-    def rattleMut(self, stdev = 0.3, mutRate = 0.7, zEnhance=True):
+    def rattleMut(self, stdev = 0.3, mutRate = 0.7, zEnhance=True, hasFrag=None):
         '''
         enhances the atoms with higher position
+        hasFrag: if True, preserve fragment list after rattle (default: None, preserves if fragments exist, False to skip preservation)
         '''
+        # Preserve fragment list if requested or if fragments exist
+        fragList_to_restore = None
+        if hasFrag or (hasFrag is None and self.fragList is not None):
+            fragList_to_restore = self.get_fragList()
+        
         print(' |- Rattle mutation!')
         tmpAtoms = self.get_allAtoms()
         pos = tmpAtoms.get_positions()
@@ -646,6 +662,10 @@ class Interface:
                 if pos[i][2] > max(self.zLim): pos[i][2] = max(self.zLim)
                 if pos[i][2] < min(self.zLim): pos[i][2] = min(self.zLim)
         self.set_allPos(pos)
+        
+        # Restore fragment list if it was preserved (fragNames and bridList will be recomputed from fragList)
+        if fragList_to_restore is not None:
+            self.set_fragList(fragList_to_restore)
     
     def rattleMut_buffer(self, stdev = 0.3, mutRate = 0.7, zEnhance=True):
         print(' |- Rattle mutation! -- buffer atoms')
