@@ -338,7 +338,7 @@ def del_freeMol(atoms, list_keep=[0], scale = 1.1):
     return tmpAtoms, deadList
 
 
-def detect_bond_between_adsFrag(atoms, fragList):
+def detect_bond_between_adsFrag_old(atoms, fragList):
     # returns: [3, 8, [{1, 2}, {1, 3}]]
     fragAtoms = [atoms[f] for f in fragList]
     bondList = []
@@ -354,6 +354,35 @@ def detect_bond_between_adsFrag(atoms, fragList):
                 bonds_inter = [l for l in bonds_c if l not in bonds_merge]
                 if len(bonds_inter) > 0:
                     bondList.append([i, j, bonds_inter])
+    return bondList
+
+def detect_bond_between_adsFrag(atoms, fragList):
+    fragAtoms = [atoms[f] for f in fragList]
+    bondList = []
+    for i in range(len(fragAtoms)):
+        for j in range(len(fragAtoms)):
+            if i<j:
+                bonds_i = [set(l[:2]) for l in get_bondpairs(fragAtoms[i])]
+                bonds_j = [set(l[:2]) for l in get_bondpairs(fragAtoms[j])]
+                bonds_j = [set([idx + len(fragAtoms[i]) for idx in l]) for l in bonds_j]
+                frags_combined = fragAtoms[i] + fragAtoms[j]
+                bonds_merge = bonds_i + bonds_j
+                bonds_c = [set(l[:2]) for l in get_bondpairs(frags_combined)]
+                bonds_inter = [l for l in bonds_c if l not in bonds_merge]
+                
+                # FIX: Filter to only keep true inter-fragment bonds
+                len_i = len(fragAtoms[i])
+                true_inter_bonds = []
+                for bond in bonds_inter:
+                    bond_list = list(bond)
+                    # Check if one atom is from frag_i (idx < len_i) and one from frag_j (idx >= len_i)
+                    atom_i_from_frag_i = bond_list[0] < len_i
+                    atom_j_from_frag_i = bond_list[1] < len_i
+                    if atom_i_from_frag_i != atom_j_from_frag_i:  # One from each fragment
+                        true_inter_bonds.append(bond)
+                
+                if len(true_inter_bonds) > 0:
+                    bondList.append([i, j, true_inter_bonds])
     return bondList
 
 def get_covalRadii(atoms):
@@ -374,7 +403,7 @@ def has_badContact(atoms, tolerance=0):
     diff = atoms.get_all_distances(mic=True) - get_contactMat(atoms, scale=1-tolerance)
     return diff.min() < 0
 
-def is_bonded(atoms, list1, list2, scale=1.1):
+def is_bonded(atoms, list1, list2, scale=1.15):
     flag = False
     cvRad = get_covalRadii(atoms)
     for i in list1:

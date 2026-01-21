@@ -115,7 +115,7 @@ def grow_frag(
     interfc,  growList,
     xLim=None, yLim=None, zLim=None,
     sampZEnhance=None,
-    bldaSigma=0.1, bldaScale=1, toler=0.5,
+    bldaSigma=0.1, bldaScale=1, toler=0.25,
     doShuffle=False,
     rattle=False, rattleStdev=0.05, rattleZEnhance=False,
     sameFragPenalty=0,

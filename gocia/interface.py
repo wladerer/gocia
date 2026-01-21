@@ -913,9 +913,9 @@ class Interface:
         
         # Pick the fragment to grow
         if growProb == None:
-            myFrag = np.random.choice(fragPool, size=1)[0]
+            myFrag = str(np.random.choice(fragPool, size=1)[0])
         else:
-            myFrag = np.random.choice(fragPool, size=1, p=growProb)[0]
+            myFrag = str(np.random.choice(fragPool, size=1, p=growProb)[0])
         
         print(myFrag, end='\t')
         tmpInterfc = grow_frag(
@@ -986,7 +986,7 @@ class Interface:
     def growMut_box_frag(self, fragPool, xyzLims, bondRejList = None, constrainTop=False):
         print(' |- Growth mutation:', end = '\t')
         tmpInterfc = self.copy()
-        myFrag = np.random.choice(fragPool, size=1)[0]
+        myFrag = str(np.random.choice(fragPool, size=1)[0])
         print(myFrag)
         from gocia.geom.build import boxSample_frag
         tmpInterfc = boxSample_frag(
@@ -1003,10 +1003,10 @@ class Interface:
         toler=0.2, stepsize=0.05, nsteps=200):
 #        from ase.calculators.lj import LennardJones
         from gocia.calc.lj import LennardJones
-        from ase.optimize.bfgs import BFGS
+        from ase.optimize.lbfgs import LBFGS
         tmpAtoms = self.get_allAtoms()
         tmpAtoms.calc = LennardJones(tolerAngs=toler, tolerMult=toler)
-        geomOpt = BFGS(
+        geomOpt = LBFGS(
             tmpAtoms,
             maxstep=stepsize,
             trajectory=None,
@@ -1019,14 +1019,14 @@ class Interface:
     def preopt_hooke(self, cutoff = 1.5,
         toler=0.2, stepsize=0.05, nsteps=200):
         from gocia.calc.hooke import Hooke
-        from ase.optimize.bfgs import BFGS
+        from ase.optimize.lbfgs import LBFGS
         tmpAtoms = self.get_allAtoms()
         tmpAtoms.calc = Hooke(
             cutoff=cutoff,
             tolerAngs=toler,
             tolerMult=toler
             )
-        geomOpt = BFGS(
+        geomOpt = LBFGS(
             tmpAtoms,
             maxstep=stepsize,
             trajectory=None,
