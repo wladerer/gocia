@@ -13,3 +13,4 @@ null
 *.vasp
 dev*.md
 *.xlsx
+.DS_Store
