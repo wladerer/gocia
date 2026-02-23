@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.venv/
+*.db
+gen_???/
+gocia.yaml
+*.h5
+CONTCAR*
+POSCAR*
