@@ -100,11 +100,12 @@ class GeneticOperator(ABC):
 # Shared geometry utilities used by multiple operators
 # ---------------------------------------------------------------------------
 
+
 def remove_clashes(
     slab: Atoms,
     adsorbate_atoms: Atoms,
     n_slab: int,
-    min_distance: float = 1.5,
+    min_distance: float = 1.2,
 ) -> Atoms:
     """
     Remove adsorbate atoms that clash with any other atom.
