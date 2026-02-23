@@ -417,7 +417,7 @@ def cmd_inspect(
 
         # Top N filter
         if top is not None:
-            df = df.head(top)
+            df = df.sort_values("grand_canonical_energy").head(top)
 
         # Output
         if output:

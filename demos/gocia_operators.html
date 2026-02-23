@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOCIA Graph Operators</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #11141a;
+    --border: #1e2430;
+    --accent: #4af0a8;
+    --accent2: #f06040;
+    --accent3: #60a0f0;
+    --text: #c8d4e8;
+    --muted: #4a5568;
+    --pt: #a0b8d0;
+    --O: #f06060;
+    --C: #404040;
+    --CO: #f0a040;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 8px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+    letter-spacing: 0.04em;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .operator-layout {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr 80px 1fr;
+    gap: 0;
+    align-items: start;
+    margin-bottom: 32px;
+  }
+
+  .op-section { }
+
+  .op-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    padding-left: 4px;
+  }
+
+  .op-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 48px;
+    gap: 4px;
+  }
+
+  .arrow-line {
+    font-size: 1.4rem;
+    color: var(--muted);
+  }
+
+  .arrow-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+
+  canvas {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    cursor: crosshair;
+  }
+
+  canvas:hover { border-color: var(--muted); }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { border-color: var(--accent); color: var(--accent); }
+  button.primary:hover { background: var(--accent); color: #000; }
+
+  .info-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+
+  .info-box .step {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .legend-line {
+    width: 20px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  .stoich-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 0.68rem;
+  }
+
+  .stoich-tag {
+    padding: 2px 8px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+
+  .cut-info {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 6px;
+    padding-left: 4px;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 120px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  .val-display {
+    color: var(--accent);
+    min-width: 36px;
+  }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GOCIA Graph Operators</h1>
+  <span class="subtitle">Pt(111) · O &amp; CO adsorbates · interactive</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('splice')">splice</div>
+  <div class="tab" onclick="switchTab('merge')">merge</div>
+  <div class="tab" onclick="switchTab('mutate')">mutate</div>
+</div>
+
+<!-- ═══════════════════════════════ SPLICE ═══════════════════════════════ -->
+<div id="panel-splice" class="panel active">
+  <div class="info-box">
+    <span class="step">splice</span> — cuts both parents along a random plane and swaps the halves.
+    Adsorbates are treated as <em>graph components</em>: O atoms are isolated nodes; CO molecules are
+    bonded pairs that always travel together. Each child inherits its parent's stoichiometry —
+    if the cut leaves a deficit, atoms are added at displaced positions; excess atoms are removed.
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#a0b8d0"></div> Pt</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f06060"></div> O</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#505050; border:2px solid #f0a040"></div> C</div>
+    <div class="legend-item"><div class="legend-line" style="background:#4af0a8; opacity:0.5"></div> bond (CO)</div>
+    <div class="legend-item"><div class="legend-line" style="background:#f06040; opacity:0.7; border-top: 2px dashed #f06040; height:0"></div> cut plane</div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" onclick="randomizeSplice()">⟳ new random cut</button>
+    <div class="slider-row">
+      cut position
+      <input type="range" min="20" max="80" value="50" id="cutSlider" oninput="updateCut(this.value)">
+      <span class="val-display" id="cutVal">50%</span>
+    </div>
+    <div class="slider-row">
+      axis
+      <button onclick="toggleAxis()" id="axisBtn" style="min-width:60px">x-axis</button>
+    </div>
+  </div>
+
+  <div id="cut-info" class="cut-info"></div>
+
+  <div class="operator-layout" id="splice-layout">
+    <div class="op-section">
+      <div class="op-label">Parent A · O:2 CO:1</div>
+      <canvas id="c-pa" width="260" height="200"></canvas>
+      <div class="stoich-row">
+        <span class="stoich-tag" style="color:#4af0a8;border-color:#4af0a8">target → O:2 CO:1</span>
+      </div>
+    </div>
+
+    <div class="op-arrow">
+      <div class="arrow-line">→</div>
+      <div class="arrow-label">splice<br>+<br>correct</div>
+    </div>
+
+    <div class="op-section">
+      <div class="op-label">Child 1 · left_A + right_B</div>
+      <canvas id="c-c1" width="260" height="200"></canvas>
+      <div class="stoich-row" id="c1-stoich"></div>
+    </div>
+
+    <div class="op-arrow">
+      <div class="arrow-line">←</div>
+      <div class="arrow-label">splice<br>+<br>correct</div>
+    </div>
+
+    <div class="op-section">
+      <div class="op-label">Parent B · O:1 CO:2</div>
+      <canvas id="c-pb" width="260" height="200"></canvas>
+      <div class="stoich-row">
+        <span class="stoich-tag" style="color:#60a0f0;border-color:#60a0f0">target → O:1 CO:2</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="operator-layout">
+    <div class="op-section" style="grid-column:3">
+      <div class="op-label">Child 2 · left_B + right_A</div>
+      <canvas id="c-c2" width="260" height="200"></canvas>
+      <div class="stoich-row" id="c2-stoich"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ MERGE ═══════════════════════════════ -->
+<div id="panel-merge" class="panel">
+  <div class="info-box">
+    <span class="step">merge</span> — takes adsorbates from <em>both</em> parents, combines them on a single
+    slab, removes any steric clashes (atoms closer than the threshold), then corrects to match
+    one parent's stoichiometry. Unlike splice, merge produces only <em>one</em> child and tends to
+    increase adsorbate coverage by pooling both parent layers.
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#a0b8d0"></div> Pt</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f06060"></div> O</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#505050;border:2px solid #f0a040"></div> C</div>
+    <div class="legend-item"><div class="legend-line" style="background:#4af0a8;opacity:0.5"></div> bond (CO)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0604040;border:2px solid #f06040"></div> clashing (removed)</div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" onclick="randomizeMerge()">⟳ new random merge</button>
+    <div class="slider-row">
+      clash threshold
+      <input type="range" min="5" max="30" value="15" id="clashSlider" oninput="updateClash(this.value)">
+      <span class="val-display" id="clashVal">1.5 Å</span>
+    </div>
+  </div>
+
+  <div class="operator-layout">
+    <div class="op-section">
+      <div class="op-label">Parent A · O:2 CO:1</div>
+      <canvas id="m-pa" width="260" height="200"></canvas>
+    </div>
+
+    <div class="op-arrow">
+      <div class="arrow-line">→</div>
+      <div class="arrow-label">combine<br>+<br>remove<br>clashes</div>
+    </div>
+
+    <div class="op-section">
+      <div class="op-label">Combined (pre-cull)</div>
+      <canvas id="m-combined" width="260" height="200"></canvas>
+      <div id="m-clash-info" class="cut-info"></div>
+    </div>
+
+    <div class="op-arrow">
+      <div class="arrow-line">→</div>
+      <div class="arrow-label">correct<br>stoich</div>
+    </div>
+
+    <div class="op-section">
+      <div class="op-label">Child · target O:2 CO:1</div>
+      <canvas id="m-child" width="260" height="200"></canvas>
+      <div class="stoich-row" id="m-stoich"></div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:0; align-items:start; margin-top:-16px">
+    <div style="width:260px">
+      <div class="op-label">Parent B · O:1 CO:2</div>
+      <canvas id="m-pb" width="260" height="200"></canvas>
+    </div>
+    <div style="width:80px; padding-top:48px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; color:var(--muted)">↗</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ MUTATE ═══════════════════════════════ -->
+<div id="panel-mutate" class="panel">
+  <div class="info-box">
+    <span class="step">mutate_add</span> places a new atom/molecule at a random clash-free position above the slab.<br>
+    <span class="step">mutate_remove</span> removes one randomly chosen atom of a given species.<br>
+    <span class="step">mutate_displace</span> moves one atom to a new random position — changes geometry, not stoichiometry.
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#a0b8d0"></div> Pt</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f06060"></div> O</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#505050;border:2px solid #f0a040"></div> C</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4af0a8;border:2px solid #4af0a8"></div> added</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0604040;border:2px dashed #f06040"></div> removed</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a060f040;border:2px solid #a060f0"></div> displaced</div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" onclick="randomizeMutate()">⟳ randomize</button>
+    <button onclick="setMutateOp('add')" id="btn-add">add O</button>
+    <button onclick="setMutateOp('remove')" id="btn-remove">remove O</button>
+    <button onclick="setMutateOp('displace')" id="btn-displace">displace</button>
+    <button onclick="setMutateOp('addCO')" id="btn-addCO">add CO</button>
+  </div>
+
+  <div class="operator-layout">
+    <div class="op-section">
+      <div class="op-label">Parent · O:2 CO:1</div>
+      <canvas id="mut-parent" width="260" height="200"></canvas>
+    </div>
+
+    <div class="op-arrow">
+      <div class="arrow-line">→</div>
+      <div class="arrow-label" id="mut-arrow-label">mutate_add</div>
+    </div>
+
+    <div class="op-section">
+      <div class="op-label" id="mut-child-label">Child</div>
+      <canvas id="mut-child" width="260" height="200"></canvas>
+      <div class="stoich-row" id="mut-stoich"></div>
+    </div>
+
+    <div style="grid-column:4/6"></div>
+  </div>
+</div>
+
+<script>
+// ─── Coordinate system ──────────────────────────────────────────────────────
+// We work in 2D (x, y) representing the top-down view of the slab.
+// Atoms are rendered as circles; size encodes element.
+// The slab is a 4×4 Pt(111) hex grid projected to 2D.
+// Adsorbates sit ~1.5 Å above: shown as filled, slightly larger circles.
+
+const W = 260, H = 200;
+const PAD = 20;
+
+// Pt(111) hex lattice in 2D, 4×4 = 16 atoms
+// a1 = (2.77, 0), a2 = (1.385, 2.40) for fcc111
+function makeSlab() {
+  const pts = [];
+  const a1x = 48, a1y = 0;
+  const a2x = 24, a2y = 36;
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      pts.push({
+        x: PAD + 10 + i * a1x + j * a2x,
+        y: PAD + 10 + i * a1y + j * a2y,
+        type: 'Pt'
+      });
+    }
+  }
+  return pts;
+}
+
+const SLAB = makeSlab();
+const CELL_W = W - 2*PAD;
+const CELL_H = H - 2*PAD;
+
+// Hollow/bridge sites for adsorbate placement (normalized 0-1)
+const SITES = [
+  {x:0.18, y:0.22}, {x:0.42, y:0.18}, {x:0.68, y:0.22}, {x:0.88, y:0.18},
+  {x:0.12, y:0.45}, {x:0.35, y:0.42}, {x:0.60, y:0.40}, {x:0.82, y:0.44},
+  {x:0.20, y:0.65}, {x:0.45, y:0.62}, {x:0.70, y:0.60}, {x:0.90, y:0.65},
+  {x:0.15, y:0.82}, {x:0.40, y:0.80}, {x:0.65, y:0.78}, {x:0.85, y:0.82},
+];
+
+function siteToCanvas(s) {
+  return { x: PAD + s.x * CELL_W, y: PAD + s.y * CELL_H };
+}
+
+// ─── State ──────────────────────────────────────────────────────────────────
+
+let cutFrac = 0.50;
+let cutAxis = 0; // 0=x, 1=y
+let clashThreshold = 15; // px distance
+
+let mutateOp = 'add';
+let mutateTarget = null;
+
+// Parent A: O at sites 0,4; CO at site 8 (C) + site 9 shifted (O of CO)
+// Parent B: O at site 2; CO at sites 5,10
+
+function makeParentA() {
+  return [
+    {site: 0, type:'O', id:'A0'},
+    {site: 4, type:'O', id:'A1'},
+    {site: 8, type:'C', id:'A2', co_partner:'A3'},
+    {site:{x:0.25,y:0.72}, type:'O', id:'A3', co_partner:'A2', isCO:true},
+  ];
+}
+
+function makeParentB() {
+  return [
+    {site: 2, type:'O', id:'B0'},
+    {site: 5, type:'C', id:'B1', co_partner:'B2'},
+    {site:{x:0.43,y:0.51}, type:'O', id:'B2', co_partner:'B1', isCO:true},
+    {site:10, type:'C', id:'B3', co_partner:'B4'},
+    {site:{x:0.76,y:0.70}, type:'O', id:'B4', co_partner:'B3', isCO:true},
+  ];
+}
+
+let parentA = makeParentA();
+let parentB = makeParentB();
+
+function getPos(ads) {
+  if (typeof ads.site === 'number') return siteToCanvas(SITES[ads.site]);
+  return siteToCanvas(ads.site);
+}
+
+// ─── Drawing ────────────────────────────────────────────────────────────────
+
+const COLORS = {
+  Pt:  '#8aa8c0',
+  O:   '#e85050',
+  C:   '#383838',
+  CO_O:'#e09030',
+  bond:'#4af0a8',
+  cut: '#f06040',
+  added: '#4af0a8',
+  removed: '#f06040',
+  displaced: '#9060f0',
+  clash: '#f0604060',
+};
+
+function drawPt(ctx, x, y, alpha=1) {
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.arc(x, y, 7, 0, Math.PI*2);
+  ctx.fillStyle = COLORS.Pt;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawAtom(ctx, x, y, type, opts={}) {
+  const r = type === 'C' ? 7 : type === 'O' ? 6 : 5;
+  const col = opts.isCO_O ? COLORS.CO_O : COLORS[type] || '#fff';
+  const borderCol = opts.added ? COLORS.added : opts.removed ? COLORS.removed :
+                    opts.displaced ? COLORS.displaced : 'rgba(255,255,255,0.25)';
+  const borderW = (opts.added || opts.removed || opts.displaced) ? 2 : 1;
+  const alpha = opts.faded ? 0.25 : 1;
+
+  ctx.globalAlpha = alpha;
+
+  if (opts.removed) {
+    // Dashed circle
+    ctx.save();
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.arc(x, y, r+2, 0, Math.PI*2);
+    ctx.strokeStyle = COLORS.removed;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 0.3;
+  }
+
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI*2);
+  ctx.fillStyle = col;
+  ctx.fill();
+  ctx.strokeStyle = borderCol;
+  ctx.lineWidth = borderW;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Label
+  if (type !== 'Pt') {
+    ctx.globalAlpha = opts.removed ? 0.3 : 1;
+    ctx.fillStyle = type === 'C' ? '#aaa' : '#fff';
+    ctx.font = `bold ${r-1}px JetBrains Mono`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(type, x, y+0.5);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawBond(ctx, x1, y1, x2, y2, opts={}) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = opts.clash ? '#f06040' : COLORS.bond;
+  ctx.lineWidth = opts.clash ? 1 : 2;
+  ctx.globalAlpha = opts.faded ? 0.15 : 0.6;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawCutLine(ctx, frac, axis) {
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = COLORS.cut;
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  if (axis === 0) {
+    const x = PAD + frac * CELL_W;
+    ctx.moveTo(x, 0); ctx.lineTo(x, H);
+  } else {
+    const y = PAD + frac * CELL_H;
+    ctx.moveTo(0, y); ctx.lineTo(W, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // Label
+  ctx.fillStyle = COLORS.cut;
+  ctx.font = '9px JetBrains Mono';
+  ctx.globalAlpha = 0.7;
+  if (axis === 0) {
+    const x = PAD + frac * CELL_W;
+    ctx.fillText('cut', x+3, 12);
+  } else {
+    const y = PAD + frac * CELL_H;
+    ctx.fillText('cut', 4, y-4);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHalfTint(ctx, frac, axis, side, color) {
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = color;
+  if (axis === 0) {
+    const x = PAD + frac * CELL_W;
+    if (side === 'left') ctx.fillRect(PAD, PAD, x - PAD, CELL_H);
+    else ctx.fillRect(x, PAD, W - x, CELL_H);
+  } else {
+    const y = PAD + frac * CELL_H;
+    if (side === 'left') ctx.fillRect(PAD, PAD, CELL_W, y - PAD);
+    else ctx.fillRect(PAD, y, CELL_W, H - y);
+  }
+  ctx.restore();
+}
+
+function clearCanvas(id) {
+  const cv = document.getElementById(id);
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  return ctx;
+}
+
+function drawSlabBase(ctx, alpha=0.5) {
+  SLAB.forEach(p => drawPt(ctx, p.x, p.y, alpha));
+}
+
+// Determine which side of cut an adsorbate falls on
+function onLeft(ads, frac, axis) {
+  const pos = getPos(ads);
+  if (axis === 0) return pos.x < PAD + frac * CELL_W;
+  return pos.y < PAD + frac * CELL_H;
+}
+
+// Get CO groups: returns list of {atoms, centroid}
+function getCOGroups(parent) {
+  const groups = [];
+  const visited = new Set();
+  parent.forEach(ads => {
+    if (visited.has(ads.id)) return;
+    visited.add(ads.id);
+    if (ads.co_partner) {
+      const partner = parent.find(a => a.id === ads.co_partner);
+      if (partner) {
+        visited.add(partner.id);
+        const p1 = getPos(ads), p2 = getPos(partner);
+        groups.push({
+          atoms: [ads, partner],
+          centroid: {x: (p1.x+p2.x)/2, y: (p1.y+p2.y)/2},
+          isCO: true
+        });
+      }
+    } else {
+      const pos = getPos(ads);
+      groups.push({atoms:[ads], centroid:pos, isCO:false});
+    }
+  });
+  return groups;
+}
+
+// ─── SPLICE ─────────────────────────────────────────────────────────────────
+
+function drawParentForSplice(id, parent, frac, axis, tintSide, tintColor, showCut) {
+  const ctx = clearCanvas(id);
+  drawSlabBase(ctx, 0.4);
+
+  if (showCut) {
+    drawHalfTint(ctx, frac, axis, 'left', '#4af0a8');
+    drawHalfTint(ctx, frac, axis, 'right', '#60a0f0');
+    drawCutLine(ctx, frac, axis);
+  }
+
+  // Draw bonds first
+  getCOGroups(parent).forEach(grp => {
+    if (grp.isCO) {
+      const [C_ads, O_ads] = grp.atoms[0].type === 'C' ? grp.atoms : grp.atoms.reverse();
+      const cp = getPos(C_ads), op = getPos(O_ads);
+      const left = axis===0 ? grp.centroid.x < PAD+frac*CELL_W : grp.centroid.y < PAD+frac*CELL_H;
+      drawBond(ctx, cp.x, cp.y, op.x, op.y, {faded: false});
+    }
+  });
+
+  // Draw atoms
+  parent.forEach(ads => {
+    const pos = getPos(ads);
+    const left = onLeft(ads, frac, axis);
+    const isCO_O = ads.isCO && ads.type === 'O';
+    drawAtom(ctx, pos.x, pos.y, ads.type, {isCO_O, faded: false});
+  });
+}
+
+function buildSpliceChildren() {
+  const groupsA = getCOGroups(parentA);
+  const groupsB = getCOGroups(parentB);
+
+  // Split by cut
+  const leftA = groupsA.filter(g => {
+    return cutAxis===0 ? g.centroid.x < PAD+cutFrac*CELL_W : g.centroid.y < PAD+cutFrac*CELL_H;
+  });
+  const rightA = groupsA.filter(g => !leftA.includes(g));
+  const leftB = groupsB.filter(g => {
+    return cutAxis===0 ? g.centroid.x < PAD+cutFrac*CELL_W : g.centroid.y < PAD+cutFrac*CELL_H;
+  });
+  const rightB = groupsB.filter(g => !leftB.includes(g));
+
+  return {leftA, rightA, leftB, rightB};
+}
+
+function drawSpliceChild(id, groupsFromA, groupsFromB, targetStoich, stoichDivId) {
+  const ctx = clearCanvas(id);
+  drawSlabBase(ctx, 0.4);
+
+  // Count what we have
+  let have = {O:0, CO:0};
+  [...groupsFromA, ...groupsFromB].forEach(g => {
+    if (g.isCO) have.CO++;
+    else have.O++;
+  });
+
+  // Draw A-origin atoms (green tint region)
+  groupsFromA.forEach(grp => {
+    if (grp.isCO) {
+      const [Ca, Oa] = grp.atoms[0].type==='C' ? grp.atoms : [...grp.atoms].reverse();
+      const cp=getPos(Ca), op=getPos(Oa);
+      drawBond(ctx, cp.x, cp.y, op.x, op.y);
+      drawAtom(ctx, cp.x, cp.y, 'C', {isCO_O:false});
+      drawAtom(ctx, op.x, op.y, 'O', {isCO_O:true});
+    } else {
+      const pos = getPos(grp.atoms[0]);
+      drawAtom(ctx, pos.x, pos.y, 'O');
+    }
+  });
+
+  // Draw B-origin atoms (blue tint region, slightly offset to show origin)
+  groupsFromB.forEach(grp => {
+    if (grp.isCO) {
+      const [Ca, Oa] = grp.atoms[0].type==='C' ? grp.atoms : [...grp.atoms].reverse();
+      const cp=getPos(Ca), op=getPos(Oa);
+      drawBond(ctx, cp.x, cp.y, op.x, op.y);
+      drawAtom(ctx, cp.x, cp.y, 'C');
+      drawAtom(ctx, op.x, op.y, 'O', {isCO_O:true});
+    } else {
+      const pos = getPos(grp.atoms[0]);
+      drawAtom(ctx, pos.x, pos.y, 'O');
+    }
+  });
+
+  // Show added atoms if stoichiometry correction needed
+  const target = targetStoich;
+  if (have.O < target.O) {
+    // Add a ghost O in a free area
+    for (let i=0; i<3; i++) {
+      const s = SITES[Math.floor(Math.random()*SITES.length)];
+      const p = siteToCanvas(s);
+      drawAtom(ctx, p.x, p.y, 'O', {added:true});
+      break;
+    }
+  }
+
+  // Stoich display
+  const div = document.getElementById(stoichDivId);
+  const totalO = have.O + Math.max(0, target.O - have.O) + (have.CO * 1);
+  const totalCO = have.CO + Math.max(0, target.CO - have.CO);
+  div.innerHTML = `<span class="stoich-tag" style="color:#4af0a8;border-color:#4af0a8">
+    O:${have.O} CO:${have.CO} ${have.O<target.O||have.CO<target.CO?'<span style="color:#f06040">→ corrected</span>':'✓'}
+  </span>`;
+}
+
+function renderSplice() {
+  drawParentForSplice('c-pa', parentA, cutFrac, cutAxis, 'left', '#4af0a8', true);
+  drawParentForSplice('c-pb', parentB, cutFrac, cutAxis, 'right', '#60a0f0', true);
+
+  const {leftA, rightA, leftB, rightB} = buildSpliceChildren();
+
+  drawSpliceChild('c-c1', leftA, rightB, {O:2, CO:1}, 'c1-stoich');
+  drawSpliceChild('c-c2', leftB, rightA, {O:1, CO:2}, 'c2-stoich');
+
+  const axisName = cutAxis===0?'x':'y';
+  document.getElementById('cut-info').textContent =
+    `cut plane: ${axisName}-axis at ${Math.round(cutFrac*100)}% | ` +
+    `left_A: ${leftA.length} group(s) | right_B: ${rightB.length} group(s) | ` +
+    `left_B: ${leftB.length} group(s) | right_A: ${rightA.length} group(s)`;
+}
+
+function randomizeSplice() {
+  cutFrac = 0.2 + Math.random()*0.6;
+  cutAxis = Math.random() > 0.5 ? 1 : 0;
+  document.getElementById('cutSlider').value = Math.round(cutFrac*100);
+  document.getElementById('cutVal').textContent = Math.round(cutFrac*100)+'%';
+  document.getElementById('axisBtn').textContent = cutAxis===0?'x-axis':'y-axis';
+  renderSplice();
+}
+
+function updateCut(val) {
+  cutFrac = val/100;
+  document.getElementById('cutVal').textContent = val+'%';
+  renderSplice();
+}
+
+function toggleAxis() {
+  cutAxis = 1 - cutAxis;
+  document.getElementById('axisBtn').textContent = cutAxis===0?'x-axis':'y-axis';
+  renderSplice();
+}
+
+// ─── MERGE ──────────────────────────────────────────────────────────────────
+
+let mergeParentA = makeParentA();
+let mergeParentB = makeParentB();
+let mergeClashPairs = [];
+
+function dist(a, b) {
+  const pa = getPos(a), pb = getPos(b);
+  return Math.sqrt((pa.x-pb.x)**2 + (pa.y-pb.y)**2);
+}
+
+function renderMerge() {
+  // Parent A
+  let ctx = clearCanvas('m-pa');
+  drawSlabBase(ctx, 0.4);
+  drawAdsLayer(ctx, mergeParentA, {});
+
+  // Parent B
+  ctx = clearCanvas('m-pb');
+  drawSlabBase(ctx, 0.4);
+  drawAdsLayer(ctx, mergeParentB, {});
+
+  // Combined
+  ctx = clearCanvas('m-combined');
+  drawSlabBase(ctx, 0.4);
+  const all = [...mergeParentA, ...mergeParentB];
+  const clashing = findClashing(all, clashThreshold);
+
+  // Draw bonds
+  getCOGroups(mergeParentA).concat(getCOGroups(mergeParentB)).forEach(grp => {
+    if (!grp.isCO) return;
+    const [Ca, Oa] = grp.atoms[0].type==='C'?grp.atoms:[...grp.atoms].reverse();
+    const cp=getPos(Ca), op=getPos(Oa);
+    const isClash = clashing.has(Ca.id)||clashing.has(Oa.id);
+    drawBond(ctx, cp.x, cp.y, op.x, op.y, {clash: isClash, faded: isClash});
+  });
+
+  all.forEach(ads => {
+    const pos = getPos(ads);
+    const isClash = clashing.has(ads.id);
+    const isCO_O = ads.isCO && ads.type==='O';
+    drawAtom(ctx, pos.x, pos.y, ads.type, {removed:isClash, isCO_O, faded:isClash});
+    if (isClash) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 10, 0, Math.PI*2);
+      ctx.strokeStyle='#f06040';
+      ctx.lineWidth=1;
+      ctx.globalAlpha=0.5;
+      ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+  });
+
+  const nClash = clashing.size;
+  document.getElementById('m-clash-info').textContent =
+    `${nClash} atom(s) removed (within ${(clashThreshold/10).toFixed(1)} Å)`;
+
+  // Child after cull + stoich correct
+  ctx = clearCanvas('m-child');
+  drawSlabBase(ctx, 0.4);
+  const surviving = all.filter(a => !clashing.has(a.id));
+  drawAdsLayer(ctx, surviving, {});
+
+  // Stoich
+  let O=0, CO=0;
+  getCOGroups(surviving).forEach(g => g.isCO?CO++:O++);
+  // Correct to target O:2 CO:1
+  const needO = Math.max(0, 2-O), needCO = Math.max(0,1-CO);
+  const rmO = Math.max(0, O-2), rmCO = Math.max(0,CO-1);
+  document.getElementById('m-stoich').innerHTML =
+    `<span class="stoich-tag" style="color:#4af0a8;border-color:#4af0a8">
+      raw O:${O} CO:${CO}
+      ${needO||needCO?`→ +${needO}O +${needCO}CO`:''}
+      ${rmO||rmCO?`→ −${rmO}O −${rmCO}CO`:''}
+    </span>`;
+}
+
+function findClashing(atoms, threshold) {
+  const clashing = new Set();
+  for (let i=0;i<atoms.length;i++) {
+    for (let j=i+1;j<atoms.length;j++) {
+      const a=atoms[i], b=atoms[j];
+      // Only cross-parent clashes matter
+      if (a.id[0]===b.id[0]) continue;
+      if (dist(a,b) < threshold) {
+        clashing.add(a.id);
+        clashing.add(b.id);
+      }
+    }
+  }
+  return clashing;
+}
+
+function drawAdsLayer(ctx, atoms, opts) {
+  // Draw bonds
+  const groups = getCOGroups(atoms);
+  groups.forEach(grp => {
+    if (!grp.isCO) return;
+    const [Ca, Oa] = grp.atoms[0].type==='C'?grp.atoms:[...grp.atoms].reverse();
+    const cp=getPos(Ca), op=getPos(Oa);
+    drawBond(ctx, cp.x, cp.y, op.x, op.y);
+  });
+  // Draw atoms
+  atoms.forEach(ads => {
+    const pos = getPos(ads);
+    drawAtom(ctx, pos.x, pos.y, ads.type, {
+      isCO_O: ads.isCO&&ads.type==='O',
+      added: opts.added&&opts.added.has(ads.id),
+      removed: opts.removed&&opts.removed.has(ads.id),
+      displaced: opts.displaced&&opts.displaced.has(ads.id),
+    });
+  });
+}
+
+function randomizeMerge() {
+  // Slightly randomize positions
+  mergeParentA = makeParentA();
+  mergeParentB = makeParentB();
+  // Nudge B atoms a bit
+  mergeParentB.forEach(a => {
+    if (typeof a.site === 'number') {
+      a.site = Math.min(15, Math.max(0, a.site + Math.floor(Math.random()*3)-1));
+    }
+  });
+  renderMerge();
+}
+
+function updateClash(val) {
+  clashThreshold = parseInt(val);
+  document.getElementById('clashVal').textContent = (val/10).toFixed(1)+' Å';
+  renderMerge();
+}
+
+// ─── MUTATE ─────────────────────────────────────────────────────────────────
+
+let mutParent = makeParentA();
+let mutChild = null;
+let mutHighlight = {added:new Set(), removed:new Set(), displaced:new Set()};
+
+function setMutateOp(op) {
+  mutateOp = op;
+  ['add','remove','displace','addCO'].forEach(o =>
+    document.getElementById('btn-'+o).classList.toggle('primary', o===op));
+  randomizeMutate();
+}
+
+function randomizeMutate() {
+  mutParent = makeParentA();
+  mutChild = mutParent.map(a=>({...a, site: typeof a.site==='number'?a.site:{...a.site}}));
+  mutHighlight = {added:new Set(), removed:new Set(), displaced:new Set()};
+
+  const oAtoms = mutChild.filter(a=>a.type==='O'&&!a.co_partner);
+  const allAtoms = mutChild;
+
+  if (mutateOp==='add') {
+    // Find a free site
+    const usedSites = new Set(mutParent.filter(a=>typeof a.site==='number').map(a=>a.site));
+    let newSite = Math.floor(Math.random()*16);
+    while(usedSites.has(newSite)) newSite=(newSite+1)%16;
+    const newAtom = {site:newSite, type:'O', id:'NEW_O'};
+    mutChild.push(newAtom);
+    mutHighlight.added.add('NEW_O');
+    document.getElementById('mut-arrow-label').textContent='mutate_add';
+    document.getElementById('mut-child-label').textContent='Child · O:3 CO:1';
+
+  } else if (mutateOp==='addCO') {
+    const usedSites = new Set(mutParent.filter(a=>typeof a.site==='number').map(a=>a.site));
+    let cSite=Math.floor(Math.random()*16);
+    while(usedSites.has(cSite)) cSite=(cSite+1)%16;
+    const cs = SITES[cSite];
+    const oSiteAdj = {x:cs.x+0.07, y:cs.y+0.10};
+    const newC={site:cSite, type:'C', id:'NEW_C', co_partner:'NEW_CO'};
+    const newO={site:oSiteAdj, type:'O', id:'NEW_CO', co_partner:'NEW_C', isCO:true};
+    mutChild.push(newC, newO);
+    mutHighlight.added.add('NEW_C');
+    mutHighlight.added.add('NEW_CO');
+    document.getElementById('mut-arrow-label').textContent='mutate_add';
+    document.getElementById('mut-child-label').textContent='Child · O:2 CO:2';
+
+  } else if (mutateOp==='remove') {
+    if (oAtoms.length>0) {
+      const target = oAtoms[Math.floor(Math.random()*oAtoms.length)];
+      mutHighlight.removed.add(target.id);
+      document.getElementById('mut-arrow-label').textContent='mutate_remove';
+      document.getElementById('mut-child-label').textContent='Child · O:1 CO:1';
+    }
+
+  } else if (mutateOp==='displace') {
+    if (oAtoms.length>0) {
+      const target = oAtoms[Math.floor(Math.random()*oAtoms.length)];
+      const usedSites=new Set(mutParent.filter(a=>typeof a.site==='number').map(a=>a.site));
+      let newSite=Math.floor(Math.random()*16);
+      while(usedSites.has(newSite)) newSite=(newSite+1)%16;
+      const idx=mutChild.findIndex(a=>a.id===target.id);
+      mutChild[idx]={...mutChild[idx], site:newSite};
+      mutHighlight.displaced.add(target.id);
+      document.getElementById('mut-arrow-label').textContent='mutate_displace';
+      document.getElementById('mut-child-label').textContent='Child · O:2 CO:1';
+    }
+  }
+
+  renderMutate();
+}
+
+function renderMutate() {
+  // Parent
+  let ctx = clearCanvas('mut-parent');
+  drawSlabBase(ctx, 0.4);
+  drawAdsLayer(ctx, mutParent, {});
+
+  // Child
+  ctx = clearCanvas('mut-child');
+  drawSlabBase(ctx, 0.4);
+
+  // Draw bonds
+  const groups = getCOGroups(mutChild);
+  groups.forEach(grp => {
+    if (!grp.isCO) return;
+    const [Ca, Oa] = grp.atoms[0].type==='C'?grp.atoms:[...grp.atoms].reverse();
+    const cp=getPos(Ca), op=getPos(Oa);
+    const addedBond = mutHighlight.added.has(Ca.id)||mutHighlight.added.has(Oa.id);
+    drawBond(ctx, cp.x, cp.y, op.x, op.y, {});
+    if (addedBond) {
+      // Extra glow
+      ctx.save();
+      ctx.shadowBlur=6; ctx.shadowColor=COLORS.added;
+      drawBond(ctx, cp.x, cp.y, op.x, op.y, {});
+      ctx.restore();
+    }
+  });
+
+  mutChild.forEach(ads => {
+    const pos = getPos(ads);
+    const isAdded = mutHighlight.added.has(ads.id);
+    const isRemoved = mutHighlight.removed.has(ads.id);
+    const isDisplaced = mutHighlight.displaced.has(ads.id);
+    const isCO_O = ads.isCO&&ads.type==='O';
+    drawAtom(ctx, pos.x, pos.y, ads.type, {added:isAdded, removed:isRemoved, displaced:isDisplaced, isCO_O});
+  });
+
+  // Draw original position for displaced
+  if (mutateOp==='displace' && mutHighlight.displaced.size>0) {
+    const origId = [...mutHighlight.displaced][0];
+    const origAtom = mutParent.find(a=>a.id===origId);
+    if (origAtom) {
+      const op = getPos(origAtom);
+      ctx.beginPath();
+      ctx.arc(op.x, op.y, 8, 0, Math.PI*2);
+      ctx.setLineDash([3,3]);
+      ctx.strokeStyle='#9060f0';
+      ctx.lineWidth=1.5;
+      ctx.globalAlpha=0.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha=1;
+      // Arrow from old to new
+      const newAtom=mutChild.find(a=>a.id===origId);
+      if(newAtom){
+        const np=getPos(newAtom);
+        ctx.beginPath();
+        ctx.moveTo(op.x,op.y); ctx.lineTo(np.x,np.y);
+        ctx.strokeStyle='#9060f0'; ctx.lineWidth=1; ctx.globalAlpha=0.4; ctx.stroke(); ctx.globalAlpha=1;
+      }
+    }
+  }
+
+  // Stoich
+  let O=0, CO=0;
+  const survivingGroups = getCOGroups(mutChild.filter(a=>!mutHighlight.removed.has(a.id)));
+  survivingGroups.forEach(g=>g.isCO?CO++:O++);
+  document.getElementById('mut-stoich').innerHTML =
+    `<span class="stoich-tag" style="color:#4af0a8;border-color:#4af0a8">result: O:${O} CO:${CO}</span>`;
+}
+
+// ─── Tab switching ───────────────────────────────────────────────────────────
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['splice','merge','mutate'];
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p=>{
+    p.classList.toggle('active', p.id==='panel-'+name);
+  });
+  if (name==='splice') renderSplice();
+  if (name==='merge') renderMerge();
+  if (name==='mutate') renderMutate();
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  setMutateOp('add');
+  renderSplice();
+  renderMerge();
+});
+</script>
+</body>
+</html>
