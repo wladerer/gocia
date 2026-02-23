@@ -1,0 +1,136 @@
+[build-system]
+requires = ["setuptools>=68", "setuptools-scm>=8"]
+
+[project]
+name = "gocia"
+dynamic = ["version"]
+description = "Grand Canonical Interface Optimization via Genetic Algorithm"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Zisheng Zhang" },
+    { name = "William Laderer" },
+]
+keywords = ["surface science", "genetic algorithm", "DFT", "adsorbates", "VASP", "ASE"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Core scientific stack
+    "ase>=3.23",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "networkx>=3.0",
+
+    # Config validation
+    "pydantic>=2.0",
+
+    # YAML parsing
+    "pyyaml>=6.0",
+
+    # CLI
+    "click>=8.1",
+
+    # Database / data handling
+    "pandas>=2.0",
+
+    # HDF5 trajectory storage
+    "h5py>=3.9",
+]
+
+[project.optional-dependencies]
+# Pre-optimizer: required for MACE-based relaxation and full prototyping without VASP
+mace = [
+    "mace-torch>=0.3",
+]
+
+# Enhanced fingerprinting: SOAP descriptors via DScribe
+soap = [
+    "dscribe>=2.1",
+]
+
+# Development and testing
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.4",           # linting + formatting
+    "mypy>=1.8",
+    "pre-commit>=3.6",
+]
+
+# Install everything (convenient for developers)
+all = [
+    "gocia[mace,soap,dev]",
+]
+
+[project.scripts]
+gocia = "gocia.cli:cli"
+
+[project.urls]
+Repository = "https://github.com/wladerer/gocia"
+Issues = "https://github.com/wladerer/gocia/issues"
+
+# --- setuptools config ---
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gocia*"]
+
+[tool.setuptools-scm]
+# Version is derived from git tags (e.g. v0.1.0 → 0.1.0)
+# Run `git tag v0.1.0` to set the version
+write_to = "gocia/_version.py"
+
+# --- Ruff (linter + formatter) ---
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501", # line too long — handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gocia"]
+
+# --- Pytest ---
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+# Markers for skipping tests that need external calculators
+markers = [
+    "mace: requires mace-torch to be installed",
+    "vasp: requires a VASP binary and license",
+    "slow: integration tests that take more than a few seconds",
+]
+
+# --- Mypy ---
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+# Pydantic and ASE have incomplete stubs; ignore missing for now
+ignore_missing_imports = true
