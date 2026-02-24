@@ -417,7 +417,7 @@ def cmd_inspect(
 
         # Top N filter
         if top is not None:
-            df = df.sort_values("grand_canonical_energy").head(top)
+            df = df.head(top)
 
         # Output
         if output:
@@ -500,7 +500,7 @@ def cmd_plot(run_dir: str, output: str) -> None:
         raise SystemExit(1)
 
     from gocia.database.db import GociaDB
-    from gocia.plot import build_dashboard
+    from gocia.analysis.plot import build_dashboard
 
     with GociaDB(db_path) as db:
         df = db.to_dataframe()
@@ -516,6 +516,244 @@ def cmd_plot(run_dir: str, output: str) -> None:
     click.echo(f"✓ Dashboard written to {output_path}")
     click.echo(f"  {len(df)} structures · "
                f"{df['generation'].nunique()} generation(s)")
+
+
+# ---------------------------------------------------------------------------
+# gocia pourbaix
+# ---------------------------------------------------------------------------
+
+@cli.command("pourbaix")
+@_run_dir_option
+@_config_option
+@click.option("--output", "-o",
+              default="gocia_pourbaix.html",
+              show_default=True,
+              type=click.Path(dir_okay=False),
+              help="Output HTML file.")
+@click.option("--species", "-s",
+              default="O",
+              show_default=True,
+              help="Species for the 1-D Δμ sweep (e.g. O, CO).")
+@click.option("--mu-min", "mu_min",
+              default=-3.0, show_default=True, type=float,
+              help="Lower bound of Δμ sweep (eV).")
+@click.option("--mu-max", "mu_max",
+              default=0.0, show_default=True, type=float,
+              help="Upper bound of Δμ sweep (eV).")
+@click.option("--u-min", "u_min",
+              default=-1.0, show_default=True, type=float,
+              help="Lower electrode potential for Pourbaix grid (V vs RHE).")
+@click.option("--u-max", "u_max",
+              default=1.0, show_default=True, type=float,
+              help="Upper electrode potential for Pourbaix grid (V vs RHE).")
+@click.option("--ph-min", "ph_min",
+              default=0.0, show_default=True, type=float,
+              help="Lower pH for Pourbaix grid.")
+@click.option("--ph-max", "ph_max",
+              default=14.0, show_default=True, type=float,
+              help="Upper pH for Pourbaix grid.")
+@click.option("--n-u", "n_u",
+              default=120, show_default=True, type=int,
+              help="Grid resolution along U axis.")
+@click.option("--n-ph", "n_ph",
+              default=100, show_default=True, type=int,
+              help="Grid resolution along pH axis.")
+@click.option("--temperature", "-T",
+              default=None, type=float,
+              help="Temperature override (K). Default: from gocia.yaml.")
+@click.option("--pressure", "-P",
+              default=None, type=float,
+              help="Pressure override (atm). Default: from gocia.yaml.")
+def cmd_pourbaix(
+    run_dir: str,
+    config: str,
+    output: str,
+    species: str,
+    mu_min: float,
+    mu_max: float,
+    u_min: float,
+    u_max: float,
+    ph_min: float,
+    ph_max: float,
+    n_u: int,
+    n_ph: int,
+    temperature: float | None,
+    pressure: float | None,
+) -> None:
+    """
+    Write an interactive Pourbaix and coverage phase diagram.
+
+    Reads gocia.db and gocia.yaml to produce a two-panel HTML file:
+
+    \b
+      Panel 1 — Coverage phase diagram
+          Most stable adsorbate configuration vs Δμ for one species.
+          Useful for understanding coverage at different gas-phase conditions.
+
+      Panel 2 — Pourbaix diagram
+          Most stable surface phase on a (U, pH) grid.
+          Each pixel is the configuration with the lowest grand canonical
+          energy at those electrochemical conditions.
+
+    The bare slab is always included as the reference phase (G = 0).
+    Phase boundaries are contour lines where the winning phase changes.
+
+    Examples:
+
+    \b
+        gocia pourbaix
+        gocia pourbaix --species O --mu-min -2.5 --mu-max 0.5
+        gocia pourbaix --u-min -1.5 --u-max 0.5 --ph-min 0 --ph-max 14
+        gocia pourbaix --temperature 350 --pressure 10
+    """
+    run_dir_path = Path(run_dir)
+    db_path = run_dir_path / "gocia.db"
+
+    if not db_path.exists():
+        click.echo(f"No database found at {db_path}.", err=True)
+        raise SystemExit(1)
+
+    # Resolve config path relative to run_dir if not absolute
+    config_path = Path(config)
+    if not config_path.is_absolute():
+        config_path = (run_dir_path / config_path).resolve()
+    if not config_path.exists():
+        click.echo(f"Config not found at {config_path}.", err=True)
+        raise SystemExit(1)
+
+    try:
+        import plotly  # noqa: F401
+        import pandas  # noqa: F401
+        import numpy   # noqa: F401
+    except ImportError as e:
+        click.echo(
+            f"Missing dependency: {e}. "
+            "Install with: pip install plotly pandas numpy",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    from gocia.analysis.pourbaix import build_pourbaix_html
+
+    click.echo(f"Computing phase diagrams from {db_path} ...")
+    click.echo(f"  species sweep: Δμ_{species} ∈ [{mu_min}, {mu_max}] eV")
+    click.echo(f"  Pourbaix grid: U ∈ [{u_min}, {u_max}] V  ×  pH ∈ [{ph_min}, {ph_max}]"
+               f"  ({n_u} × {n_ph} points)")
+
+    output_path = build_pourbaix_html(
+        db_path=db_path,
+        config_path=config_path,
+        output_path=output,
+        species=species,
+        mu_range=(mu_min, mu_max),
+        U_range=(u_min, u_max),
+        pH_range=(ph_min, ph_max),
+        n_U=n_u,
+        n_pH=n_ph,
+        temperature=temperature,
+        pressure=pressure,
+    )
+
+    click.echo(f"✓ Written to {output_path}")
+
+
+# ---------------------------------------------------------------------------
+# gocia merge
+# ---------------------------------------------------------------------------
+
+@cli.command("merge")
+@click.argument("sources", nargs=-1, required=True,
+                type=click.Path(file_okay=False))
+@click.option("--output", "-o",
+              required=True,
+              type=click.Path(file_okay=False),
+              help="Output directory for the merged gocia.db.")
+@click.option("--fingerprint-threshold", "fp_threshold",
+              default=0.01, show_default=True, type=float,
+              help="Cosine distance below which two structures from different "
+                   "runs are considered duplicates. 0.01 is tight; "
+                   "0.05 is more aggressive.")
+@click.option("--include-all", "include_all",
+              is_flag=True, default=False,
+              help="Include desorbed/failed structures too. "
+                   "Default: converged and isomer only.")
+@_verbose_option
+def cmd_merge(
+    sources: tuple[str, ...],
+    output: str,
+    fp_threshold: float,
+    include_all: bool,
+    verbose: bool,
+) -> None:
+    """
+    Merge two or more GOCIA runs into a single database.
+
+    SOURCES are run root directories, each containing gocia.db and gocia.yaml.
+
+    The merged database can be used with all other gocia commands:
+    gocia inspect, gocia plot, gocia pourbaix, etc.
+
+    What the merge does:
+
+    \b
+      - Checks that slab energies and chemical potentials are consistent
+        across runs (warns if they differ — does not abort).
+      - Tags every structure with its source run directory in extra_data
+        so you can trace where each structure came from.
+      - Deduplicates cross-run structures by fingerprint cosine distance.
+        Same-run duplicates are already handled by each run's GA loop.
+      - Rewrites geometry paths to absolute paths so the merged DB works
+        from any directory.
+      - Offsets generation numbers so runs are sequential rather than
+        overlapping (original generation preserved in extra_data).
+
+    Examples:
+
+    \b
+        gocia merge run_A run_B --output merged/
+        gocia merge run_* --output merged/ --fingerprint-threshold 0.05
+        gocia merge run_A run_B run_C --output merged/ --include-all
+    """
+    _setup_logging(verbose)
+
+    source_paths = [Path(s) for s in sources]
+
+    # Validate sources before doing any work
+    for src in source_paths:
+        if not (src / "gocia.db").exists():
+            click.echo(f"Error: no gocia.db found in {src}", err=True)
+            raise SystemExit(1)
+        if not (src / "gocia.yaml").exists():
+            click.echo(f"Error: no gocia.yaml found in {src}", err=True)
+            raise SystemExit(1)
+
+    click.echo(f"Merging {len(source_paths)} run(s):")
+    for src in source_paths:
+        click.echo(f"  {src}")
+    click.echo(f"Output → {output}")
+    click.echo(f"Fingerprint threshold: {fp_threshold}")
+    click.echo()
+
+    try:
+        import numpy  # noqa: F401
+    except ImportError:
+        click.echo(
+            "numpy is required for gocia merge. "
+            "Install with: pip install numpy",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    from gocia.database.merge import merge_runs
+
+    result = merge_runs(
+        source_dirs=source_paths,
+        output_dir=Path(output),
+        fingerprint_threshold=fp_threshold,
+        include_all=include_all,
+    )
+
+    click.echo(result.summary())
 
 
 # ---------------------------------------------------------------------------
